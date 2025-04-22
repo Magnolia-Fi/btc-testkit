@@ -18,7 +18,8 @@ A Bitcoin regtest environment using Docker Compose. This setup provides everythi
    docker-compose up -d
    ```
 3. Access the Mempool block explorer at http://localhost:8888
-4. Access the Mempool API at http://localhost:8889/api
+4. Access the Mempool API at http://localhost:8888/docs/api/rest
+5. Access the Mine API at http://localhost:4000
 
 ## APIs
 
@@ -44,7 +45,7 @@ The environment also includes access to the Mempool API, which provides:
 - Fee estimates
 - Network information
 
-Access the Mempool API at `http://localhost:8889/api`. Some useful endpoints:
+See full Mempool API documentation at http://localhost:8888/docs/api/rest. Some useful endpoints:
 
 - `/api/blocks`: Get recent blocks
 - `/api/tx/{txid}`: Get transaction details
