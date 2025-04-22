@@ -1,6 +1,6 @@
-# Bitcoin Regtest Environment
+# btc-testkit
 
-A fully-featured Bitcoin regtest environment using Docker Compose. This setup provides everything you need to develop and test Bitcoin applications in a controlled environment.
+A Bitcoin regtest environment using Docker Compose. This setup provides everything you need to develop and test Bitcoin applications in a controlled environment.
 
 ## Features
 
