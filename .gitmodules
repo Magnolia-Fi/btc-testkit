@@ -1,0 +1,3 @@
+[submodule "docker-bitcoind"]
+	path = docker-bitcoind
+	url = https://github.com/Magnolia-Fi/docker-bitcoind.git
