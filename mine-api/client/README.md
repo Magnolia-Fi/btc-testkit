@@ -31,5 +31,3 @@ client.sendBitcoin('from_wallet', 'to_address', 0.1)
   .then(result => console.log(result))
   .catch(error => console.error(error));
 ```
-
-See `client.test.js` for a complete example.
