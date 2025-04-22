@@ -1,0 +1,135 @@
+version: "3.8"
+services:
+  bitcoind:
+    # image: ghcr.io/magnolia-fi/bitcoind-regtest:main
+    ## uncomment to build bitcoind from source
+    build:
+      context: ./docker-bitcoind/28.0
+      args:
+        USER: bitcoin
+        DIR: /home/bitcoin
+    command: >
+      -regtest
+      -server=1
+      -rpcallowip=0.0.0.0/0
+      -rpcuser=${BITCOIND_RPCUSER}
+      -rpcpassword=${BITCOIND_RPCPASSWORD}
+      -txindex=1
+      -rpcbind=0.0.0.0
+      -rpcport=18443
+      -listenonion=0
+      -fallbackfee=0.01
+    ports:
+      - "18443:18443"
+    volumes:
+      - bitcoin-data:/home/bitcoin/.bitcoin
+    restart: unless-stopped
+
+  mempool-db:
+    image: mariadb:11.7
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_DATABASE: ${MARIADB_DATABASE}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  mempool-api:
+    image: mempool/backend:v3.2.1
+    restart: unless-stopped
+    environment:
+      # Must be "esplora" if you're using electrs for block data
+      MEMPOOL_BACKEND: electrum
+      ELECTRUM_HOST: mempool-electrs
+      ELECTRUM_PORT: 60401
+      ELECTRUM_TLS_ENABLED: false
+      CORE_RPC_HOST: bitcoind
+      CORE_RPC_PORT: 18443
+      CORE_RPC_USERNAME: ${BITCOIND_RPCUSER}
+      CORE_RPC_PASSWORD: ${BITCOIND_RPCPASSWORD}
+      DATABASE_ENABLED: true
+      DATABASE_HOST: mempool-db
+      DATABASE_DATABASE: ${MARIADB_DATABASE}
+      DATABASE_USERNAME: ${MARIADB_USER}
+      DATABASE_PASSWORD: ${MARIADB_PASSWORD}
+    volumes:
+      - backend-cache:/backend/cache
+    depends_on:
+      bitcoind:
+        condition: service_started
+      mempool-db:
+        condition: service_healthy
+      mempool-electrs:
+        condition: service_started
+
+  mempool-web:
+    image: mempool/frontend:v3.2.1
+    restart: unless-stopped
+    environment:
+      FRONTEND_HTTP_PORT: "${MEMPOOL_WEB_PORT}"
+      BACKEND_MAINNET_HTTP_HOST: "mempool-api"
+    ports:
+      - "${MEMPOOL_WEB_PORT}:${MEMPOOL_WEB_PORT}"
+    command: >
+      ./wait-for mempool-db:3306 --timeout=720 -- nginx -g 'daemon off;'
+    depends_on:
+      - mempool-api
+
+  mempool-electrs:
+    image: mempool/electrs:v3.2.0
+    restart: unless-stopped
+    environment:
+      - RUST_BACKTRACE=full
+    command: |
+      --network regtest
+      --address-search
+      --cookie ${BITCOIND_RPCUSER}:${BITCOIND_RPCPASSWORD}
+      --db-dir /electrs
+      --lightmode
+      --cors '*'
+      --daemon-rpc-addr bitcoind:18443
+      --daemon-dir /bitcoin-datadir
+      --electrum-rpc-addr 0.0.0.0:60401
+      --utxos-limit 999999999999
+      --electrum-txs-limit 999999999999
+    volumes:
+      - electrs-data:/electrs
+      - bitcoin-data:/bitcoin-datadir
+    depends_on:
+      bitcoind:
+        condition: service_started
+
+  mine-api:
+    image: node:22
+    entrypoint: 'bash -c "npm install && npm start"'
+    restart: unless-stopped
+    ports:
+      - "${MINE_API_PORT}:${MINE_API_PORT}"
+    environment:
+      - BITCOIND_NETWORK=regtest
+      - BITCOIND_RPCUSER=${BITCOIND_RPCUSER}
+      - BITCOIND_RPCPASSWORD=${BITCOIND_RPCPASSWORD}
+      - BITCOIND_HOST=bitcoind
+      - BITCOIND_PORT=18443
+      - MINE_API_TOKEN=${MINE_API_TOKEN}
+      - MINE_API_PORT=${MINE_API_PORT}
+    working_dir: /mine-api
+    volumes:
+      - ./mine-api:/mine-api
+    depends_on:
+      bitcoind:
+        condition: service_started
+
+volumes:
+  bitcoin-data:
+  mysql-data:
+  backend-cache:
+  electrs-data:
