@@ -1,13 +1,13 @@
 version: "3.8"
 services:
   bitcoind:
-    # image: ghcr.io/magnolia-fi/bitcoind-regtest:main
+    image: ghcr.io/magnolia-fi/docker-bitcoind:master
     ## uncomment to build bitcoind from source
-    build:
-      context: ./docker-bitcoind/28.0
-      args:
-        USER: bitcoin
-        DIR: /home/bitcoin
+    # build:
+    #   context: ./docker-bitcoind/28.0
+    #   args:
+    #     USER: bitcoin
+    #     DIR: /home/bitcoin
     command: >
       -regtest
       -server=1
