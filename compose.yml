@@ -88,6 +88,9 @@ services:
     restart: unless-stopped
     environment:
       - RUST_BACKTRACE=full
+    ports:
+      - 60401:60401
+      - ${ELECTRS_RPC_PORT}:${ELECTRS_RPC_PORT}
     command: |
       --network regtest
       --address-search
@@ -98,6 +101,7 @@ services:
       --daemon-rpc-addr bitcoind:18443
       --daemon-dir /bitcoin-datadir
       --electrum-rpc-addr 0.0.0.0:60401
+      --http-addr 0.0.0.0:${ELECTRS_RPC_PORT}
       --utxos-limit 999999999999
       --electrum-txs-limit 999999999999
     volumes:
